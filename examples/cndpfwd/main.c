@@ -177,7 +177,13 @@ _l3fwd_test(jcfg_lport_t *lport, struct fwd_info *fwd)
 
         jcfg_lport_t *dst = jcfg_lport_by_index(fwd->jinfo, tx_port);
 
-        MAC_REWRITE(pktmbuf_mtod(pd->rx_mbufs[i], void *), &eaddr);    
+        if (!dst) {
+            /* Cannot forward to non-existing port, so echo back on incoming interface */
+            dst = lport;
+            MAC_SWAP(pktmbuf_mtod(pd->rx_mbufs[i], void *));
+        }
+        else
+            MAC_REWRITE(pktmbuf_mtod(pd->rx_mbufs[i], void *), &eaddr); 
 
         (void)txbuff_add(txbuff[dst->lpid], pd->rx_mbufs[i]);
     }
@@ -723,7 +729,7 @@ main(int argc, char **argv)
     if ((fwd->test == ACL_STRICT_TEST || fwd->test == ACL_PERMISSIVE_TEST) && acl_init(fwd) < 0)
         goto err;
 
-    if(fwd->test == L3_FWD_TEST && l3fwd_fib_init() < 0)
+    if(fwd->test == L3_FWD_TEST && l3fwd_fib_init(fwd) < 0)
         goto err;
 
     /* don't start any threads before we initialize ACL */

@@ -57,6 +57,7 @@ enum {
 #define ENABLE_CLI_TAG "cli"        /**< json tag to enable/disable CLI */
 #define MODE_TAG       "mode"       /**< json tag to set the mode flag */
 #define UDS_PATH_TAG   "uds_path"   /**< json tag for UDS to get xsk map fd */
+#define FIB_RULES_TAG  "l3fwd-fib-rules"  /**< json tag to set up static FIB entries */
 
 #define MODE_DROP           "drop"           /**< Drop the received packets */
 #define MODE_RX_ONLY        "rx-only"        /**< Alias for MODE_DROP */
@@ -124,16 +125,18 @@ struct app_options {
 };
 
 struct fwd_info {
-    jcfg_info_t *jinfo;        /**< JSON-C configuration */
-    uint32_t flags;            /**< Application set of flags */
-    test_t test;               /**< Test type to be run */
-    volatile int timer_quit;   /**< flags to start and stop the application */
-    pthread_barrier_t barrier; /**< Barrier for all threads */
-    bool barrier_inited;       /**< True if barrier is inited */
-    struct app_options opts;   /**< Application options*/
-    pkt_api_t pkt_api;         /**< The packet API mode */
-    uds_info_t *xdp_uds;       /**< UDS to get xsk map fd from */
-    int burst;                 /**< Burst Size */
+    jcfg_info_t *jinfo;         /**< JSON-C configuration */
+    uint32_t flags;             /**< Application set of flags */
+    test_t test;                /**< Test type to be run */
+    volatile int timer_quit;    /**< flags to start and stop the application */
+    pthread_barrier_t barrier;  /**< Barrier for all threads */
+    bool barrier_inited;        /**< True if barrier is inited */
+    struct app_options opts;    /**< Application options*/
+    pkt_api_t pkt_api;          /**< The packet API mode */
+    uds_info_t *xdp_uds;        /**< UDS to get xsk map fd from */
+    int burst;                  /**< Burst Size */
+    char ** fib_rules;          /**< FIB entries */
+    uint16_t fib_size;          /**< Number of FIB entries */
 };
 
 struct thread_func_arg_t {
@@ -152,7 +155,7 @@ int fwd_acl_clear(uds_client_t *c, const char *cmd, const char *params);
 int fwd_acl_add_rule(uds_client_t *c, const char *cmd, const char *params);
 int fwd_acl_build(uds_client_t *c, const char *cmd, const char *params);
 int fwd_acl_read(uds_client_t *c, const char *cmd, const char *params);
-int l3fwd_fib_init(void);
+int l3fwd_fib_init(struct fwd_info * fwd);
 int l3fwd_fib_lookup(uint32_t *ip, struct ether_addr *eaddr, uint16_t *tx_port);
 
 #define MAX_STRLEN_SIZE 16

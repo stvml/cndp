@@ -8,8 +8,9 @@
 
 #include "main.h" 
 
-#define IPV4_L3FWD_NUM_FIB_RULES \
-    (sizeof(ipv4_l3fwd_fib_rule_array) / sizeof(ipv4_l3fwd_fib_rule_array[0]))
+#define FIB_RULES_IP    0   /**< JSON index for IP address in a single entry */
+#define FIB_RULES_MAC   1   /**< JSON index for MAC address in a single entry */
+#define FIB_RULES_PORT  2   /**< JSON index for TX port in a single entry */
 
 struct ipv4_l3fwd_fib_rule {
     uint32_t ip;
@@ -21,29 +22,61 @@ struct ipv4_l3fwd_fib_rule {
 static struct cne_fib *fib;
 
 static int
-l3fwd_fib_populate(struct cne_fib *fib)
+l3fwd_fib_populate(struct fwd_info *fwd, struct cne_fib *fib)
 {
-    /* 
-     * 198.18.0.0/16 are set aside for RFC2544 benchmarking (RFC5735). 
-     * Each FIB rule is IPv4, depth, next hop destination MAC, TX port. 
-     */
-    struct ipv4_l3fwd_fib_rule ipv4_l3fwd_fib_rule_array[] = {
-        {CNE_IPV4(198, 18, 0, 0), 24, {{0x02, 0x00, 0x01, 0x02, 0x03, 0x04}}, 1},
-        {CNE_IPV4(198, 18, 1, 0), 24, {{0x06, 0x00, 0x01, 0x02, 0x03, 0x04}}, 0}
-    };
-
-    for (uint16_t i = 0; i < IPV4_L3FWD_NUM_FIB_RULES; i++){
-        uint32_t ip = ipv4_l3fwd_fib_rule_array[i].ip;
-        uint8_t depth = ipv4_l3fwd_fib_rule_array[i].depth;
+    for (uint16_t i = 0; i < fwd->fib_size; i++){
+        struct ether_addr mac_le;
+        char *entry[3];
+        char *ip_prefix[4];
+        char *address[2];
+        char *mac_addr[6];
+        int tx_port;
         uint64_t eaddr = 0;
 
-        inet_mtoh64(&ipv4_l3fwd_fib_rule_array[i].nh, &eaddr);
+        /* Parse the comma seperated FIB entry */
+        entry[0] = strtok(fwd->fib_rules[i], ",");
+        for(uint16_t j = 1; j < 3; ++j)
+            entry[j] = strtok(NULL, ",");
+
+        /* Parse the IP address and depth */
+        address[0] = strtok(entry[FIB_RULES_IP], "/");
+        address[1] = strtok(NULL, "/");
+
+        /* Parse the IP address */
+        ip_prefix[0] = strtok(address[0], ".");
+        for(uint16_t j = 1; j < 4; ++j) {
+            ip_prefix[j] = strtok(NULL, ".");
+        }
+
+        /* Parse the MAC address */
+        mac_addr[0] = strtok(entry[FIB_RULES_MAC], ":");
+        for(uint16_t j = 1; j < 6; ++j)
+            mac_addr[j] = strtok(NULL, ":");
+
+        tx_port = atoi(entry[FIB_RULES_PORT]);
+
+        jcfg_lport_t *dst = jcfg_lport_by_index(fwd->jinfo, tx_port);
+
+        if (!dst)
+            /* Cannot find a local port to match the entry */
+            return -1;
+
+        uint32_t ip = CNE_IPV4(atoi(ip_prefix[0]), atoi(ip_prefix[1]),
+                                atoi(ip_prefix[2]), atoi(ip_prefix[3]));
+        uint8_t depth = (uint8_t) atoi(address[1]);
+
+        for(int j = 0; j < ETHER_ADDR_LEN; ++j){
+            mac_le.ether_addr_octet[j] = (uint8_t) strtoul(mac_addr[j], NULL, 16);
+        }
+
+        inet_mtoh64(&mac_le, &eaddr);
 
         /* Store both TX port and destination MAC in FIB's nexthop field. */
-        uint64_t nexthop = ((uint64_t)ipv4_l3fwd_fib_rule_array[i].tx_port << 48) | eaddr;
+        uint64_t nexthop = ((uint64_t)tx_port << 48) | eaddr;
 
         if(cne_fib_add(fib, ip, depth, nexthop) < 0)
             return -1;
+
     }
 
     return 0;
@@ -62,7 +95,7 @@ l3fwd_fib_lookup(uint32_t *ip, struct ether_addr *eaddr, uint16_t *tx_port)
 }
 
 int
-l3fwd_fib_init(void)
+l3fwd_fib_init(struct fwd_info *fwd)
 {
     struct cne_fib_conf config;
     config.max_routes = 1 << 16;
@@ -73,8 +106,13 @@ l3fwd_fib_init(void)
     if (!fib)
         return -1;
 
-    if (l3fwd_fib_populate(fib) < 0)
+    if (l3fwd_fib_populate(fwd, fib) < 0)
         return -1;
+
+    /* Deallocate the entries now that we have the entries populated. */
+    for(int i = 0; i < fwd->fib_size; ++i)
+        free(fib->fib_rules[i]);
+    free(fib->fib_rules);
 
     return 0;
 }
