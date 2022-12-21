@@ -77,12 +77,13 @@ process_callback(jcfg_info_t *j __cne_unused, void *_obj, void *arg, int idx)
                     CNE_ERR_RET("UDS handshake failed\n");
             }
         } else if (!strncmp(obj.opt->name, FIB_RULES_TAG, nlen)) {
-           if (obj.opt->val.type == ARRAY_OPT_TYPE) {
-                f->fib_rules = malloc(obj.opt->val.array_sz * sizeof(char *));
-                uint16_t i = 0;
-                for(i = 0; i < obj.opt->val.array_sz; ++i) {
+            uint16_t i;
+            if (obj.opt->val.type == ARRAY_OPT_TYPE) {
+                f->fib_rules = calloc(obj.opt->val.array_sz, sizeof(char *));
+
+                for(i = 0; i < obj.opt->val.array_sz; ++i)
                     f->fib_rules[i] = obj.opt->val.arr[i]->str;
-                }
+                
                 f->fib_size = i;
             }
         }
