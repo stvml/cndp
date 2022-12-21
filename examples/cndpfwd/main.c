@@ -109,7 +109,7 @@ _fwd_test(jcfg_lport_t *lport, struct fwd_info *fwd)
     struct fwd_port *pd                          = lport->priv_;
     struct create_txbuff_thd_priv_t *thd_private = pd->thd->priv_;
     txbuff_t **txbuff;
-    int i, n_pkts;
+    int n_pkts;
 
     if (!pd)
         CNE_ERR_RET("fwd_port passed in lport private data is NULL\n");
@@ -120,7 +120,7 @@ _fwd_test(jcfg_lport_t *lport, struct fwd_info *fwd)
     if (n_pkts == PKTDEV_ADMIN_STATE_DOWN)
         return -1;
 
-    for (i = 0; i < n_pkts; i++) {
+    for (int i = 0; i < n_pkts; i++) {
         uint8_t dst_lport = get_dst_lport(pktmbuf_mtod(pd->rx_mbufs[i], void *));
         jcfg_lport_t *dst = jcfg_lport_by_index(fwd->jinfo, dst_lport);
 
@@ -153,7 +153,7 @@ _l3fwd_test(jcfg_lport_t *lport, struct fwd_info *fwd)
     struct fwd_port *pd                          = lport->priv_;
     struct create_txbuff_thd_priv_t *thd_private = pd->thd->priv_;
     txbuff_t **txbuff;
-    int i, n_pkts;
+    int n_pkts;
     struct ether_addr eaddr;
     uint16_t tx_port;
 
@@ -166,7 +166,7 @@ _l3fwd_test(jcfg_lport_t *lport, struct fwd_info *fwd)
     if (n_pkts == PKTDEV_ADMIN_STATE_DOWN)
         return -1;
 
-    for (i = 0; i < n_pkts; i++) {
+    for (int i = 0; i < n_pkts; i++) {
 
         struct cne_ipv4_hdr *rx_ip_hdr = pktmbuf_mtod_offset(pd->rx_mbufs[i], struct cne_ipv4_hdr *, ETHER_HDR_LEN);
         rx_ip_hdr->time_to_live--;
