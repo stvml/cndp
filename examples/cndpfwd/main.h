@@ -65,7 +65,7 @@ enum {
 #define MODE_LOOPBACK       "loopback"       /**< Alias for MODE_LB */
 #define MODE_TX_ONLY        "tx-only"        /**< Transmit only */
 #define MODE_FWD            "fwd"            /**< L2 Forwarding mode */
-#define MODE_L3_FWD         "l3-fwd"         /**< L3 Forwarding mode */
+#define MODE_L3_FWD         "l3fwd"         /**< L3 Forwarding mode */
 #define MODE_ACL_STRICT     "acl-strict"     /**< ACL forwarding with permit list mode */
 #define MODE_ACL_PERMISSIVE "acl-permissive" /**< ACL forwarding with deny list mode */
 #define MODE_TX_ONLY_RX     "tx-only-rx"     /**< Transmit only plus RX enabled */
